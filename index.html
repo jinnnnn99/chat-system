@@ -1,0 +1,178 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ja" lang="ja">
+<head>
+    <title>データサイエンスchat</title>
+    <style>
+        #chat-container {
+            width: 400px;
+            margin: 0 auto;
+            padding: 20px;
+            border: 1px solid #8d76e7;
+            position: relative;
+        }
+        #connect-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+        #messages {
+            height: 300px;
+            overflow-y: scroll;
+            border: 1px solid #ddd;
+            padding: 10px;
+        }
+        #input-container {
+            display: flex;
+        }
+        #nickname-container {
+            display: flex;
+        }
+        #nickname {
+            flex-grow: 1;
+        }
+        #nickname-color-button {
+            margin-left: 10px;
+        }
+        #message {
+            flex-grow: 1;
+        }
+        .message-container {
+            margin-bottom: 10px;
+            border-radius: 10px;
+            overflow: hidden;
+            clear: both;
+        }
+        .message {
+            padding: 5px;
+            word-wrap: break-word;
+            max-width: 60%;
+        }   
+        .my-message-container {
+            float: right;
+        }
+        .other-message-container {
+            float: left;
+        }
+        .my-bubble {
+            position: relative;
+            background-color: #DCF8C6;
+            padding: 10px;
+            border-radius: 10px;
+        }
+        .other-bubble {
+            position: relative;
+            background-color: #F2F2F2;
+            padding: 10px;
+            border-radius: 10px;
+        }
+        .my-nickname {
+            color: #1E90FF;
+        }
+        .other-nickname {
+            color: #FF1493;
+        }
+    </style>
+</head>
+<body>
+    <div id="chat-container">
+        <button id="connect-button" onclick="connectToServer()">接続</button>
+        <h1>データサイエンスchat</h1>
+        <div id="messages" style="height: 300px; overflow-y: scroll; border: 1px solid #ddd; padding: 10px;"></div>
+        <div id="input-container">
+            <div id="nickname-container">
+                <input type="text" id="nickname" placeholder="ニックネーム">
+                <input type="color" id="nickname-color-button" value="#1E90FF">
+            </div>
+            <input type="text" id="message" placeholder="メッセージ" onkeydown="handleKeyPress(event)">
+            <button onclick="sendMessage()">送信</button>
+        </div>
+    </div>
+    <script>
+        var socket;
+        var myNicknameColor = "#1E90FF";
+        var myNickname = "あなたのニックネーム";
+        connectToServer();
+        function connectToServer() {
+            var serverURL = 'ws://gms.gdl.jp:7002';
+
+            socket = new WebSocket(serverURL);
+            console.log('Websocket Started')
+
+            socket.onopen = function () {
+                document.getElementById('connect-button').disabled = true;
+            }
+
+            socket.onmessage = function (event) {
+                var messagesContainer = document.getElementById("messages");
+                var messageDiv = document.createElement("div");
+
+                var parts = event.data.split(":");
+                var nickname = parts[0];
+                var message = parts.slice(1).join(":");
+
+                var messageContainer = document.createElement("div");
+
+                if (nickname === myNickname) {
+                    messageContainer.className = "message-container my-message-container";
+                    messageDiv.innerHTML = `<div class="my-bubble">${message}</div>`;
+                    messageContainer.innerHTML = `<span class="my-nickname" style="color: ${myNicknameColor};">${myNickname}:</span>`;
+                } else {
+                    messageContainer.className = "message-container other-message-container";
+                    messageDiv.innerHTML = `<div class="other-bubble">${message}</div>`;
+                    messageContainer.innerHTML = `<span class="other-nickname" style="color: ${myNicknameColor};">${nickname}:</span>`;
+                }
+
+                messagesContainer.appendChild(messageContainer);
+                messageContainer.appendChild(messageDiv);
+
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+
+            socket.onclose = function () {
+                console.log('サーバーとの接続が切断されました。');
+            }
+        }
+
+        function sendMessage() {
+            myNickname = document.getElementById("nickname").value; // 사용자가 입력한 닉네임 설정
+            var message = document.getElementById("message").value;
+            var messagesContainer = document.getElementById("messages");
+
+            if (myNickname && message) {
+                var messageDiv = document.createElement("div");
+
+                var messageContainer = document.createElement("div");
+
+                if (myNickname === myNickname) {
+                    messageContainer.className = "message-container my-message-container";
+                    messageDiv.innerHTML = `<div class="my-bubble">${message}</div>`;
+                    messageContainer.innerHTML = `<span class="my-nickname" style="color: ${myNicknameColor};">${myNickname}:</span>`;
+                } else {
+                    messageContainer.className = "message-container other-message-container";
+                    messageDiv.innerHTML = `<div class="other-bubble">${message}</div>`;
+                    messageContainer.innerHTML = `<span class="other-nickname" style="color: ${myNicknameColor};">${myNickname}:</span>`;
+                }
+
+                messagesContainer.appendChild(messageContainer);
+                messageContainer.appendChild(messageDiv);
+
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+                socket.send(myNickname + ":" + message);
+
+                document.getElementById("message").value = "";
+            }
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === "Enter") {
+                sendMessage();
+            }
+        }
+
+        document.getElementById("nickname-color-button").addEventListener("change", function () {
+            myNicknameColor = document.getElementById("nickname-color-button").value;
+        });
+    </script>
+</body>
+</html>
